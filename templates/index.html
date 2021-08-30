@@ -1,0 +1,14 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<div class="px-4 py-5 my-5 text-center">
+    <h1 class="display-5 fw-bold">Jack's Track App</h1>
+    <div class="col-lg-6 mx-auto">
+      <p class="lead mb-4">Click around and enjoy</p>
+      <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+        <a href="{% url 'meets' %}" class="btn btn-primary">View All Meets</a>
+            <a href="{% url 'user_list' %}" class="btn btn-primary">View All Athletes</a>
+            </div>
+    </div>
+  </div>
+  {% endblock %}
