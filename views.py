@@ -198,6 +198,7 @@ def profile(request, user_id):
 
     user = User.objects.get(id=user_id)
     results = Result.objects.filter(athlete=user).order_by('meet__date')
+    goals = user.goals.all()
 
     results_by_event = {}
     for result in results:
@@ -218,6 +219,7 @@ def profile(request, user_id):
         'user': user,
         'results':results,
         'results_by_event':results_by_event,
+        'goals': goals,
         })
 
 @login_required
@@ -338,8 +340,6 @@ def delete_result(request, result_id):
     return render(request, "delete_result.html", {
         "form": form,
         "user":user,
-        "events":events,
-        "meets":meets
     })
 
 @login_required
@@ -359,20 +359,15 @@ def edit_profile(request, user_id):
         "user":user,
     })
 
-
 @login_required
 def search(request):
     pass
 #to do
 
-
 @login_required
 def merge_athlete(request, user_id):
 
     user = User.objects.get(id=user_id)
-    results = Result.objects.filter(athlete=user)
-    events = Event.objects.all()
-    meets = Meet.objects.all()
 
     if request.method=="POST":
         form = MergeAthleteForm(request.POST)
@@ -388,8 +383,66 @@ def merge_athlete(request, user_id):
     return render(request, "merge_athlete.html", {
         "form": form,
         "user":user,
-        "results":results,
-        "events":events,
-        "meets":meets
     })
 
+@login_required
+def create_season_goal(request, user_id):
+
+
+    user = User.objects.get(id=user_id)
+
+    if request.method=="POST":
+        form = SeasonGoalForm(request.POST)
+        if form.is_valid():
+            form.save(commit=False)
+            form.instance.creator = request.user
+            form.instance.user = user
+            form.instance.save()
+            return redirect("profile", user.id)
+    else:
+        form = SeasonGoalForm()
+    
+    return render(request, "create_season_goal.html", {
+        "form": form,
+        "user":user,
+    })
+
+@login_required
+def remove_season_goal(request, goal_id):
+
+    goal = Goal.objects.get(id=goal_id)
+    user = goal.user
+
+    if request.method=="POST":
+        form = SeasonGoalForm(request.POST, instance=goal)
+        if form.is_valid():
+            goal.delete()
+        return redirect("profile", user.id)
+    else:
+        form = SeasonGoalForm(instance=goal)
+
+    return render(request, "remove_season_goal.html", {
+        "goal":goal,
+        "user":user,
+        "form":form
+    })
+
+def merge_meet(request, meet_id):
+
+    meet = Meet.objects.get(id=meet_id)
+
+    if request.method=="POST":
+        form = MergeMeetForm(request.POST)
+        if form.is_valid():
+            survivor = form.cleaned_data['meet']
+            meet.results.all().update(meet=survivor)
+            meet.delete()
+            print(f"Merging {meet.description} into {survivor.description}")
+            return redirect('meet', survivor.id)
+    else:
+        form = MergeMeetForm()
+
+    return render(request, "merge_meet.html", {
+        "form": form,
+        "meet":meet,
+    })

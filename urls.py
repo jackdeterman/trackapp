@@ -35,5 +35,8 @@ urlpatterns = [
     path('edit_result/<int:result_id>', views.edit_result, name="edit_result"),
     path('search', views.search, name="search"),
     path('merge_athlete/<int:user_id>', views.merge_athlete, name="merge_athlete"),
-    path('delete_result/<int:result_id>', views.delete_result, name="delete_result")
+    path('delete_result/<int:result_id>', views.delete_result, name="delete_result"),
+    path('create_season_goal/<int:user_id>', views.create_season_goal, name="create_season_goal"),
+    path('remove_season_goal/<int:goal_id>', views.remove_season_goal, name="remove_season_goal"),
+    path('merge_meet/<int:meet_id>', views.merge_meet, name="merge_meet"),
 ]

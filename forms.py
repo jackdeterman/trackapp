@@ -18,3 +18,13 @@ class ResultForm(forms.ModelForm):
 class MergeAthleteForm(forms.Form):
 
     user = forms.ModelChoiceField(queryset=User.objects.all().order_by('last_name'))
+
+class SeasonGoalForm(forms.ModelForm):
+    class Meta:
+        model = Goal
+        exclude = ['user', 'creator', 'meet']
+
+
+class MergeMeetForm(forms.Form):
+
+    user = forms.ModelChoiceField(queryset=Meet.objects.all().order_by('date'))

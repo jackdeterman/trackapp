@@ -8,7 +8,7 @@ from django.db.models.fields import CharField, DateField, TextField, FloatField
 from django.db.models.fields.related import ForeignKey, ManyToManyField
 
 class User(AbstractUser):
-    team = models.TextField()
+    team = models.ManyToManyField("Team", related_name="team_members")
 
     def get_prs(self):
         prs = {}
@@ -86,3 +86,18 @@ class Result(models.Model):
         else:
             return f"{self.result}"
 
+class Goal(models.Model):
+    user = models.ForeignKey(User, related_name="goals", on_delete=models.CASCADE)
+    creator = models.ForeignKey(User, related_name="goals_created", on_delete=models.CASCADE)
+    event = models.ForeignKey(Event, related_name="event_goals", on_delete=models.CASCADE)
+    season = models.ForeignKey("Season", related_name="season_goals", null=True, on_delete=models.CASCADE)
+    meet = models.ForeignKey(Meet, related_name="meet_goals", null=True, on_delete=models.CASCADE)
+    value = FloatField()
+
+class Season(models.Model):
+    name = models.CharField(max_length=100)
+    
+    def __str__(self):
+            return f"{self.name}"
+
+admin.site.register(Season)
