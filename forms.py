@@ -3,6 +3,8 @@ from .models import *
 
 class UploadForm(forms.Form):
     file = forms.FileField()
+    team = forms.ModelChoiceField(queryset=Team.objects.all().order_by('name'))
+    #season = forms.ModelChoiceField(queryset=Season.objects.all().order_by('name'))
 
 class UserForm(forms.ModelForm):
     class Meta:
@@ -28,3 +30,10 @@ class SeasonGoalForm(forms.ModelForm):
 class MergeMeetForm(forms.Form):
 
     user = forms.ModelChoiceField(queryset=Meet.objects.all().order_by('date'))
+
+class TeamForm(forms.ModelForm):
+    class Meta:
+        model = Team
+        fields = ['name']
+
+

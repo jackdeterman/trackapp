@@ -39,4 +39,8 @@ urlpatterns = [
     path('create_season_goal/<int:user_id>', views.create_season_goal, name="create_season_goal"),
     path('remove_season_goal/<int:goal_id>', views.remove_season_goal, name="remove_season_goal"),
     path('merge_meet/<int:meet_id>', views.merge_meet, name="merge_meet"),
+    path('teams', views.teams, name="teams"),
+    path('team/<int:team_id>', views.team, name="team"),
+    path('create_team/', views.edit_team, name="create_team"),
+    path('edit_team/<int:team_id>', views.edit_team, name="edit_team"),
 ]

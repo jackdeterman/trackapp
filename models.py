@@ -26,8 +26,6 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.id})"
-    
-
 admin.site.register(User)
 
 
@@ -36,6 +34,7 @@ class Team(models.Model):
     """A team represents a single athletic team like NAHS track"""
     name = CharField(max_length=100)
     coaches = ManyToManyField(User, related_name="teams_coached")
+admin.site.register(Team)
 
 
 class Event(models.Model):
@@ -63,6 +62,7 @@ class Meet(models.Model):
 
     def javascript_time(self):
         return int(time.mktime(self.date.timetuple()))
+admin.site.register(Meet)
 
 class Result(models.Model):
     athlete = models.ForeignKey(User, on_delete=models.CASCADE, related_name='results')
@@ -85,6 +85,7 @@ class Result(models.Model):
             return f"{int(minutes):02}:{seconds:05.2f}"
         else:
             return f"{self.result}"
+admin.site.register(Result)
 
 class Goal(models.Model):
     user = models.ForeignKey(User, related_name="goals", on_delete=models.CASCADE)

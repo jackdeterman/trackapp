@@ -7,7 +7,8 @@ from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.db.models import Q
 from django.http import JsonResponse
-from django.shortcuts import HttpResponse, HttpResponseRedirect, render, redirect
+from django.shortcuts import (
+    HttpResponse, HttpResponseRedirect, render, redirect, get_object_or_404)
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from openpyxl import load_workbook
@@ -27,6 +28,12 @@ def load_spreadsheet(request):
 
     if request.method == "POST":
         upload_form = UploadForm(request.POST, request.FILES)
+        if not upload_form.is_valid():
+            raise Exception("Error")
+
+        team = upload_form.cleaned_data['team']
+        season  = upload_form.cleaned_data['team']
+        
         wb = load_workbook('/Users/jackdeterman/Downloads/Boys Performances OT-21_edited.xlsx')
         sheet = wb.active
 
@@ -446,3 +453,36 @@ def merge_meet(request, meet_id):
         "form": form,
         "meet":meet,
     })
+def teams(request):
+    teams = Team.objects.all().order_by("name")
+
+    return render(request, "teams.html", {"teams":teams})
+
+@login_required
+def team(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+
+    return render(request, "team.html", {"team":team})
+
+@login_required
+def edit_team(request, team_id=None):
+    if team_id:
+        team = get_object_or_404(Team, id=team_id)
+    else:
+        team = Team()
+
+    if request.method=="POST":
+        form = TeamForm(request.POST, instance=team)
+        if form.is_valid():
+            form.save()
+            return redirect('team', team.id)
+        else:
+            print(form.errors)
+    else:
+        form = TeamForm(instance=team)
+
+    return render(request, "edit_team.html", {
+        "form": form,
+    })
+
+
