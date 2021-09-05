@@ -301,7 +301,6 @@ def meet(request, meet_id):
             results_by_event[result.event].append(result)
         else:
             results_by_event[result.event] = [result]
-    pprint(results_by_event)    
     
     return render(request, "meet.html", {
         'meet': meet,

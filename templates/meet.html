@@ -9,7 +9,64 @@
     <a href="{% url 'merge_meet' meet.id %}" class="btn btn-primary btn-sm">Merge Meet</a>
 </div>
 
-<h4>{{ athletes|length }} athletes competed {{ results.count }} times.</h4>
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Personal Records</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            19 personal records set.
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Athletes Competing</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ athletes|length }} athletes competed {{ results.count }} times.
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-inffo text-uppercase mb-1">
+                            Goals Achieved</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            42 Goals Achieved
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <canvas id="myChart" width="100" height="25"></canvas>
 <script>

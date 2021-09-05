@@ -124,8 +124,8 @@ var myChart = new Chart(ctx, {
                 <td>{{ result.method }}</td>
                 <td>{{ result.milestones }}</td>
                 <td>
-                    <a href="{% url 'edit_result' result.id %}" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i></i></a>
-                    <a href="{% url 'delete_result' result.id %}" class="btn btn-primary btn-sm"><i class="far fa-trash-alt"></i></i></a>
+                    <a href="{% url 'edit_result' result.id %}" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i></a>
+                    <a href="{% url 'delete_result' result.id %}" class="btn btn-primary btn-sm"><i class="far fa-trash-alt"></i></a>
                 </td>
             </tr>
         {% endfor %}
