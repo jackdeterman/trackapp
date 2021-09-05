@@ -30,6 +30,7 @@ urlpatterns = [
     path('meet/<int:meet_id>', views.meet, name="meet"),
     path('events', views.events, name="events"),
     path('event/<int:event_id>', views.event, name="event"),
+    path('merge_event/<int:event_id>', views.merge_event, name="merge_event"),
     path('add_result/<int:user_id>', views.add_result, name="add_result"),
     path('edit_profile/<int:user_id>', views.edit_profile, name="edit_profile"),
     path('edit_result/<int:result_id>', views.edit_result, name="edit_result"),
@@ -43,4 +44,5 @@ urlpatterns = [
     path('team/<int:team_id>', views.team, name="team"),
     path('create_team/', views.edit_team, name="create_team"),
     path('edit_team/<int:team_id>', views.edit_team, name="edit_team"),
+    path('debug_page', views.debug_page, name="debug_page"),
 ]

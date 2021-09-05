@@ -4,7 +4,7 @@ from .models import *
 class UploadForm(forms.Form):
     file = forms.FileField()
     team = forms.ModelChoiceField(queryset=Team.objects.all().order_by('name'))
-    #season = forms.ModelChoiceField(queryset=Season.objects.all().order_by('name'))
+    season = forms.ModelChoiceField(queryset=Season.objects.all().order_by('name'))
 
 class UserForm(forms.ModelForm):
     class Meta:
@@ -36,4 +36,8 @@ class TeamForm(forms.ModelForm):
         model = Team
         fields = ['name']
 
+
+class MergeEventForm(forms.Form):
+
+    event = forms.ModelChoiceField(queryset=Event.objects.all().order_by('name'))
 

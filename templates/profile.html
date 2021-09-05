@@ -79,7 +79,23 @@ var myChart = new Chart(ctx, {
     options: {
         scales: {
             y: {
-                beginAtZero: false
+                beginAtZero: false,
+                ticks: {
+                    callback: function(label, index, labels) {
+                        seconds = Number(label);
+                        return (new Date(seconds * 1000).toISOString().substr(14, 5));
+                    }
+                }
+            }
+        },
+        plugins: {
+            tooltip: { 
+                callbacks: {
+                    label: function(tooltipItem, data) {
+                        seconds = Number(tooltipItem.raw);
+                        return (new Date(seconds * 1000).toISOString().substr(14, 5));
+                    }
+                }
             }
         }
     }
@@ -87,15 +103,17 @@ var myChart = new Chart(ctx, {
 </script>
 
     <table class="table table-striped">
+        <th>Season</th>
         <th>Meet</th>
         <th>Meet Date</th>
         <th>Result</th>
         <th>Method</th>
-        <th>Edit Result</th>
-        <th>Delete</th>
+        <th>Notes</th>
+        <th></th>
     
         {% for result in event_results %}
-            <tr {% if result.is_pr %}class="table-success"{% endif %}>
+            <tr {% if result.personal_rank == 1 %}class="table-success"{% endif %}>
+                <td>{{ result.meet.season.name }} </td>
                 <td>
                     <a href="{% url 'meet' result.meet.id %}"> {{result.meet.description}}</a>
                 </td>
@@ -104,11 +122,10 @@ var myChart = new Chart(ctx, {
                     {{result.formatted_result}}
                 </td>
                 <td>{{ result.method }}</td>
+                <td>{{ result.milestones }}</td>
                 <td>
-                    <a href="{% url 'edit_result' result.id %}" class="btn btn-primary btn-sm">Edit Result</a>
-                </td>
-                <td>
-                    <a href="{% url 'delete_result' result.id %}" class="btn btn-primary btn-sm">Delete</a>
+                    <a href="{% url 'edit_result' result.id %}" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i></i></a>
+                    <a href="{% url 'delete_result' result.id %}" class="btn btn-primary btn-sm"><i class="far fa-trash-alt"></i></i></a>
                 </td>
             </tr>
         {% endfor %}
