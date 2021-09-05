@@ -566,17 +566,51 @@ def add_coach(request, team_id):
     team = Team.objects.get(id=team_id)
 
     if request.method=="POST":
-        form = CoachForm(request.POST)
+        form = CoachForm(request.POST, instance=team)
         if form.is_valid():
             form.save()
             return redirect("team", team.id)
     else:
-        form = CoachForm()
+        form = CoachForm(instance=team)
     
     return render(request, "add_coach.html", {
         "form": form,
         "team":team,
     })
+
+@login_required
+def remove_coach(request, coach_id, team_id):
+
+    coach = User.objects.get(id=coach_id)
+    team = Team.objects.get(id=team_id)
+    team.coaches.remove(coach)
+    return redirect("team", team.id)
+
+@login_required
+def add_athlete_to_team(request, team_id):
+    
+    team = Team.objects.get(id=team_id)
+
+    if request.method=="POST":
+        form = AthleteTeamForm(request.POST, instance=team)
+        if form.is_valid():
+            form.save()
+            return redirect("team", team.id)
+    else:
+        form = AthleteTeamForm(instance=team)
+    
+    return render(request, "add_athlete_to_team.html", {
+        "form": form,
+        "team":team,
+    })
+
+@login_required
+def remove_athlete_from_team(request, athlete_id, team_id):
+
+    athlete = User.objects.get(id=athlete_id)
+    team = Team.objects.get(id=team_id)
+    team.athletes.remove(athlete)
+    return redirect("team", team.id)
 
 @login_required
 def debug_page(request):

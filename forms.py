@@ -39,7 +39,12 @@ class TeamForm(forms.ModelForm):
 class CoachForm(forms.ModelForm):
     class Meta:
         model=Team
-        fields = ['coaches']
+        exclude = ['name', 'athletes']
+
+class AthleteTeamForm(forms.ModelForm):
+    class Meta:
+        model=Team
+        exclude = ['coaches', 'name']
 
 class MergeEventForm(forms.Form):
 
