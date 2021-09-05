@@ -45,4 +45,5 @@ urlpatterns = [
     path('create_team/', views.edit_team, name="create_team"),
     path('edit_team/<int:team_id>', views.edit_team, name="edit_team"),
     path('debug_page', views.debug_page, name="debug_page"),
+    path('add_coach/<int:team_id>', views.add_coach, name="add_coach")
 ]

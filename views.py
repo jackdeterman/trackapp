@@ -560,6 +560,23 @@ def edit_team(request, team_id=None):
         "form": form,
     })
 
+@login_required
+def add_coach(request, team_id):
+
+    team = Team.objects.get(id=team_id)
+
+    if request.method=="POST":
+        form = CoachForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("team", team.id)
+    else:
+        form = CoachForm()
+    
+    return render(request, "add_coach.html", {
+        "form": form,
+        "team":team,
+    })
 
 @login_required
 def debug_page(request):
@@ -579,4 +596,3 @@ def debug_page(request):
 
 
     return HttpResponse("Done")
-

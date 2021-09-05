@@ -36,6 +36,10 @@ class TeamForm(forms.ModelForm):
         model = Team
         fields = ['name']
 
+class CoachForm(forms.ModelForm):
+    class Meta:
+        model=Team
+        fields = ['coaches']
 
 class MergeEventForm(forms.Form):
 
