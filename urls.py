@@ -48,5 +48,19 @@ urlpatterns = [
     path('add_coach/<int:team_id>', views.add_coach, name="add_coach"),
     path('remove_coach/<int:coach_id>/<int:team_id>', views.remove_coach, name="remove_coach"),
     path('add_athlete_to_team/<int:team_id>', views.add_athlete_to_team, name="add_athlete_to_team"),
-    path('remove_athlete_from_team/<int:athlete_id>/<int:team_id>', views.remove_athlete_from_team, name="remove_athlete_from_team")
+    path('remove_athlete_from_team/<int:athlete_id>/<int:team_id>', views.remove_athlete_from_team, name="remove_athlete_from_team"),
+
+    # Qualifying Times
+    path('qualifying_levels',
+        views.qualifying_levels,
+        name="qualifying_levels"),
+    path('create_qualifying_level/',
+        views.edit_qualifying_level,
+        name="create_qualifying_level"),
+    path('edit_qualifying_level/<int:qualifying_level_id>',
+        views.edit_qualifying_level,
+        name="edit_qualifying_level"),
+    path('load_qualifying_levels',
+        views.load_qualifying_levels,
+        name="load_qualifying_levels"),
 ]

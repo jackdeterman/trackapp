@@ -632,3 +632,128 @@ def debug_page(request):
 
 
     return HttpResponse("Done")
+
+
+def qualifying_levels(request):
+    qualifying_levels = QualifyingLevel.objects.all().order_by("description", "gender")
+
+    form = QualifyingFilterForm(request.GET)
+    form.is_valid()
+
+    event = form.cleaned_data.get('event')
+    if event:
+        qualifying_levels = qualifying_levels.filter(event=event)
+
+    season = form.cleaned_data.get('season')
+    if season:
+        qualifying_levels = qualifying_levels.filter(season=season)
+
+    gender = form.cleaned_data.get('gender')
+    if gender:
+        qualifying_levels = qualifying_levels.filter(gender=gender)
+
+    return render(request, "qualifying_levels.html", {
+        "qualifying_levels":qualifying_levels,
+        "form": form
+    })
+
+@login_required
+def edit_qualifying_level(request, qualifying_level_id=None):
+    if qualifying_level_id:
+        qualifying_level = get_object_or_404(QualifyingLevel, id=qualifying_level_id)
+    else:
+        qualifying_level = QualifyingLevel()
+
+    if request.method=="POST":
+        form = QualifyingLevelForm(request.POST, instance=qualifying_level)
+        if form.is_valid():
+            form.save()
+            return redirect('qualifying_levels')
+        else:
+            print(form.errors)
+    else:
+        form = QualifyingLevelForm(instance=qualifying_level)
+
+    return render(request, "edit_qualifying_level.html", {
+        "form": form,
+    })
+
+@login_required
+def load_qualifying_levels(request):
+
+    if request.method == "POST":
+        upload_form = QualifyingUploadForm(request.POST, request.FILES)
+        if not upload_form.is_valid():
+            raise Exception("Error")
+
+        season  = upload_form.cleaned_data['season']
+
+        wb = load_workbook(upload_form.cleaned_data['file'])
+        sheet = wb.active
+        with transaction.atomic():
+            headers = []
+            for header in sheet[1]:
+                headers.append(header.value.lower())
+
+            total = 0
+            users = set()
+            for row in sheet.iter_rows(min_row=2, values_only=True):
+                row = dict(zip(headers, row))
+
+                description = row['description'].strip()
+                gender = row['gender'].strip()
+
+                event_name = row['event'].strip()
+                if event_name in EVENT_DICT:
+                    if EVENT_DICT[event_name] != '':
+                        event_name = EVENT_DICT[event_name]
+                event = Event.objects.get(name=event_name)
+
+                performance = row['performance']
+                if isinstance(performance, str):
+                    if "-" in performance:
+                        feet, inches = performance.split("-")
+                        feet = float(feet)
+                        inches = float(inches)
+                        performance = (12.0 * feet) + inches
+                    elif ':' in performance:
+                        try:
+                            pt = datetime.strptime(performance,'%M:%S.%f')
+                        except:
+                            print(f"Skipping {performance}")
+                            continue
+                        performance = pt.second + pt.minute*60.0 + pt.hour*3600.0 + (pt.microsecond/1000000.0)
+
+                try:
+                    performance = float(performance)
+                except:
+                    print(f"Skipping {performance}")
+                    continue
+
+                try:
+                    qt = QualifyingLevel.objects.get(
+                        description=description,
+                        event=event,
+                        season=season,
+                        gender=gender
+                    )
+                except QualifyingLevel.DoesNotExist:
+                    print(f"Creating {event.name} for {description}")
+                    qt = QualifyingLevel(
+                        description=description,
+                        event=event,
+                        season=season,
+                        gender=gender
+                    )
+                qt.value = performance
+                qt.save()
+                
+            #raise Exception("Data Test.")
+
+
+        return redirect('load_qualifying_levels')       
+    else:
+        upload_form = QualifyingUploadForm()
+
+    return render(request, "load_qualifying_levels.html", {'form': upload_form})
+

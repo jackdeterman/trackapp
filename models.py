@@ -170,6 +170,30 @@ class Goal(models.Model):
     meet = models.ForeignKey(Meet, related_name="meet_goals", null=True, on_delete=models.CASCADE)
     value = FloatField()
 
+class QualifyingLevel(models.Model):
+    description = CharField(max_length=255)
+    event = models.ForeignKey(Event, related_name="qualifying_levels", on_delete=models.CASCADE)
+    season = models.ForeignKey("Season", related_name="qualifying_levels", null=True, on_delete=models.CASCADE)
+
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female')
+    ]
+    gender = models.CharField(default='male', max_length=255, choices=GENDER_CHOICES)
+    value = FloatField()
+
+    @property
+    def formatted_value(self):
+        if self.event.unit == "inches":
+            feet, inches = divmod(self.value, 12)
+            return f"{int(feet):02}'{inches:05.2f}"
+        elif self.event.unit == 'seconds':
+            minutes, seconds = divmod(self.value, 60)
+            return f"{int(minutes):02}:{seconds:05.2f}"
+        else:
+            return f"{self.value}"
+
+
 class Season(models.Model):
     name = models.CharField(max_length=100)
     
