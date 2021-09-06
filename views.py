@@ -4,6 +4,7 @@ from datetime import datetime
 from pprint import pprint
 
 from django.core.paginator import Paginator
+from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import decorators
 from django.contrib.auth.decorators import login_required
@@ -290,7 +291,8 @@ def meets(request):
 @login_required
 def meet(request, meet_id):
 
-    meet = Meet.objects.get(id=meet_id)
+    
+    meet = get_object_or_404(Meet, id=meet_id)
     results = Result.objects.filter(meet=meet).order_by('result')
 
     results_by_event = {}
@@ -392,6 +394,7 @@ def edit_result(request, result_id):
         if form.is_valid():
             form.save()
             calculate_result_stats(user)
+            messages.success(request, 'Result successfully updated.')            
             return redirect("profile", user.id)
     else:
         form = ResultForm(instance=result)

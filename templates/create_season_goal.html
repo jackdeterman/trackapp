@@ -1,4 +1,5 @@
 {% extends 'layout.html' %}
+{% load crispy_forms_tags %}
 
 {% block body %}
 
@@ -6,9 +7,9 @@
 
 What's the Goal?: <br/>
 <form method="POST" class="form">
-    {% csrf_token %}
-    {{form}}
     <button type="submit" class="btn btn-primary">Create Goal!</button>
+    {% csrf_token %}
+    {% crispy form %}
 </form>
 
 {% endblock %}

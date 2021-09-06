@@ -39,6 +39,15 @@
                 <a href="{% url 'remove_season_goal' goal.id %}" class="btn btn-primary btn-sm">Remove Goal</a>
             </td>
         </tr>
+    {% empty %}
+        <tr>
+            <td colspan="5">
+                <i>
+                No goals for this user. 
+                <a href="{% url 'create_season_goal' user.id %}">Click here to add a goal.</a>
+                </i>
+            </td>
+        </tr>
     {% endfor %}
 </table><br/><br/>
 
@@ -112,7 +121,7 @@ var myChart = new Chart(ctx, {
         <th></th>
     
         {% for result in event_results %}
-            <tr {% if result.personal_rank == 1 %}class="table-success"{% endif %}>
+            <tr {% if result.personal_rank == 1 %}class="table-success"{% elif result.milestones %}class="table-info"{% endif %}>
                 <td>{{ result.meet.season.name }} </td>
                 <td>
                     <a href="{% url 'meet' result.meet.id %}"> {{result.meet.description}}</a>
