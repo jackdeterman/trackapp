@@ -11,8 +11,14 @@ from django.db.models.fields.related import ForeignKey, ManyToManyField
 
 from .milestones import EVENT_MILESTONES
 
+GENDER_CHOICES = [
+    ('male', 'Male'),
+    ('female', 'Female')
+]
+
 class User(AbstractUser):
     team = models.ManyToManyField("Team", related_name="team_members")
+    gender = models.CharField(max_length=255, choices=GENDER_CHOICES, default='female')
 
     def get_prs(self):
         prs = {}
@@ -53,7 +59,7 @@ class Event(models.Model):
         ('inches', 'Inches'),
         ('seconds', 'Seconds'),
     ]
-    unit = CharField(max_length=100, default='seconds')
+    unit = CharField(max_length=100, choices=unit_choices, default='seconds')
 
     def __str__(self):
         return self.name
@@ -66,8 +72,11 @@ class Meet(models.Model):
     team = ForeignKey('Team', on_delete=models.CASCADE)
     season = ForeignKey('Season', on_delete=models.CASCADE)
 
+    class Meta:
+        ordering = ['-date', 'description']    
+
     def __str__(self):
-        return f"{self.description}: {self.date}"
+        return f"{self.description} ({self.id}): {self.date} ({ self.team.name })"
 
     def javascript_time(self):
         return int(time.mktime(self.date.timetuple()))
@@ -87,6 +96,7 @@ class Result(models.Model):
     method = CharField(max_length=100, default='NA')
     personal_rank = models.IntegerField(default=-1)
     milestones = TextField(blank=True, null=True)
+    qualifications = ManyToManyField('QualifyingLevel', related_name='qualifying_results')
 
     def __str__(self):
         return f"{self.id}: {self.result}"
@@ -103,11 +113,25 @@ class Result(models.Model):
             return f"{self.result}"
 
     @property
+    def fat_adjusted_result(self):
+        if self.event.unit == "inches":
+            return self.result
+
+        if self.method == 'Hand':
+            if self.result > 180.0:
+                return self.result + 0.14
+            else:
+                return self.result + 0.24
+
+        return self.result
+
+    @property
     def milestone_num(self):
         """Use dictionary to lookup which milestone we are at if any"""
         milestones = EVENT_MILESTONES.get(self.event.name)
         if not milestones:
             return None
+
         for x, milestone in enumerate(milestones):
             if self.event.unit == "inches":
                 if self.result >= milestone:
@@ -119,13 +143,50 @@ class Result(models.Model):
 
     def get_milestone_value(self, milestone_num):
         return EVENT_MILESTONES[self.event.name][milestone_num]
+
+    def add_milestone(self, milestone_msg):
+        if self.milestones:
+            self.milestones += f" {milestone_msg}"
+        else:
+            self.milestones = milestone_msg
+        
 admin.site.register(Result)
 
 
 def calculate_result_stats(user):
+    user.results.update(milestones=None)
+    Result.qualifications.through.objects.filter(result__athlete=user).delete()
+
+    results_by_date = {}
+    for result in user.results.all().prefetch_related(
+        'event'
+    ).order_by(
+        'meet__date'
+    ):
+        results_by_date.setdefault(result.event, []).append(result)
+
+    for event, results in results_by_date.items():
+        first = results[0]
+        first.milestones = f"First time in the {event.name}."
+        first.save()
+    
+
     results_by_event = {}
-    for result in user.results.all().order_by('result'):
+    for result in user.results.all().prefetch_related(
+        'event',
+        'meet',
+        'meet__season'
+    ).order_by(
+        'result',
+    ):
         results_by_event.setdefault(result.event, []).append(result)
+
+    qualifying_qs = QualifyingLevel.objects.filter(gender=user.gender)
+    qualifying_level_dict = {}
+    for ql in qualifying_qs:
+        key = f"{ql.event_id}--{ql.season_id}"
+        qualifying_level_dict.setdefault(key, []).append(ql)
+
 
     for event, results in results_by_event.items():
         if event.unit == 'inches':
@@ -135,16 +196,32 @@ def calculate_result_stats(user):
 
         # Order by performance and figure out ranking
         for rank, result in enumerate(
-            sorted(results, key=lambda x: x.result, reverse=reverse)):
+            sorted(results, key=lambda x: x.fat_adjusted_result, reverse=reverse)):
 
             if rank == 0:
-                result.milestones = 'Personal Best!'
-            else:
-                result.milestones = ''
+                result.add_milestone('New Personal Best!')
+
             result.personal_rank = rank+1
             result.save()
 
+            # Also see if it qualifies for anything
+            key = f"{result.event_id}--{result.meet.season_id}"
+            qualifying_levels = qualifying_level_dict.get(key, [])
+            for ql in qualifying_levels:
+                if event.unit == 'inches':
+                    if result.result >= ql.value:
+                        result.qualifications.add(ql)
+                        msg = f"Qualified for {ql.description} ({ql.formatted_value})."
+                        result.add_milestone(msg)
+                else:
+                    if result.fat_adjusted_result <= ql.value:
+                        result.qualifications.add(ql)
+                        msg = f"Qualified for {ql.description} ({ql.formatted_value})."
+                        result.add_milestone(msg)
 
+        # Figure out any milestones by sorting by date,
+        # then go keep track of what milestone we are at
+        # and see if it changes
         last_milestone_num = None
         for result in sorted(results, key=lambda x: x.meet.date):
             milestone_num = result.milestone_num
@@ -154,11 +231,9 @@ def calculate_result_stats(user):
                 last_milestone_num = milestone_num
                 milestone_result = Result(result=result.get_milestone_value(milestone_num), event=event)
                 milestone_msg = f"Broke {milestone_result.formatted_result}."
-                if len(result.milestones):
-                    result.milestones += f" {milestone_msg}"
-                else:
-                    result.milestones = milestone_msg
+                result.add_milestone(milestone_msg)
                 result.save()
+
 
     
 
@@ -175,10 +250,6 @@ class QualifyingLevel(models.Model):
     event = models.ForeignKey(Event, related_name="qualifying_levels", on_delete=models.CASCADE)
     season = models.ForeignKey("Season", related_name="qualifying_levels", null=True, on_delete=models.CASCADE)
 
-    GENDER_CHOICES = [
-        ('male', 'Male'),
-        ('female', 'Female')
-    ]
     gender = models.CharField(default='male', max_length=255, choices=GENDER_CHOICES)
     value = FloatField()
 

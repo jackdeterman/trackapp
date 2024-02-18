@@ -7,16 +7,16 @@
 <table class="table table-striped">
     <tr>
         <th>Meet</th>
+        <th>Season</th>
         <th>Date</th>
     </tr>
     {% for meet in meets %}
         <tr>
             <td>
-            <a href="{% url 'meet' meet.id %}"> {{meet.description}}</a>
+                <a href="{% url 'meet' meet.id meet.description|slugify %}">{{ meet }}</a>
             </td>
-            <td> 
-                {{meet.date}} 
-            </td>
+            <td>{{meet.season.name}}</td>
+            <td>{{meet.date}}</td>
         </tr>
     {% endfor %}
 </table>

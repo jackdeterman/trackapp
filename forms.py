@@ -10,6 +10,11 @@ class UploadForm(forms.Form):
     file = forms.FileField()
     team = forms.ModelChoiceField(queryset=Team.objects.all().order_by('name'))
     season = forms.ModelChoiceField(queryset=Season.objects.all().order_by('name'))
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female')
+    ]
+    gender = forms.ChoiceField(choices=GENDER_CHOICES)
 
 class QualifyingUploadForm(forms.Form):
     file = forms.FileField()
@@ -18,17 +23,26 @@ class QualifyingUploadForm(forms.Form):
 class UserForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email']
+        fields = ['first_name', 'last_name', 'email', 'gender']
 
 
 class ResultForm(forms.ModelForm):
     class Meta:
         model = Result
-        exclude = ['id', 'athlete']
+        exclude = [
+            'id', 'athlete', 
+            'qualifications', 'milestones', 'personal_rank']
+
+    def __init__(self, *args, **kwargs):
+        super(ResultForm, self).__init__(*args, **kwargs)
+
+        self.fields["meet"].queryset = Meet.objects.all().prefetch_related(
+            'team'
+        ).order_by('-date')
 
 class MergeAthleteForm(forms.Form):
 
-    user = forms.ModelChoiceField(queryset=User.objects.all().order_by('last_name'))
+    user = forms.ModelChoiceField(queryset=User.objects.all().order_by('username'))
 
 class SeasonGoalForm(forms.ModelForm):
     class Meta:
@@ -38,7 +52,22 @@ class SeasonGoalForm(forms.ModelForm):
 
 class MergeMeetForm(forms.Form):
 
-    user = forms.ModelChoiceField(queryset=Meet.objects.all().order_by('date'))
+    meet = forms.ModelChoiceField(
+        queryset=Meet.objects.all().order_by('-date').prefetch_related('team')
+    )
+
+    def __init__(self, *args, **kwargs):
+        meet = kwargs.pop('meet')
+        super(MergeMeetForm, self).__init__(*args, **kwargs)
+
+        self.fields["meet"].queryset = Meet.objects.filter(
+            team=meet.team
+        ).exclude(
+            id=meet.id
+        ).prefetch_related(
+            'team'
+        ).order_by('-date')
+
 
 class TeamForm(forms.ModelForm):
     class Meta:

@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-!^x&gbu)n3zm*gay9@v4iqr+wg*)a-$047a6ez+5)1t70==3e_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['.natrackapp.com', '.natrackstats.com', 'localhost']
 
 
 # Application definition
@@ -37,8 +37,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_extensions',
     'crispy_forms',
-    'trackapp'
+    'trackapp',
+    # 'debug_toolbar',
 ]
 
 MIDDLEWARE = [
@@ -49,6 +51,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = 'trackapp.urls'
@@ -80,6 +83,19 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'NAME': 'trackapp_dev',
+    #     'USER': 'trackapp_dev',
+    #     'PASSWORD': 'track_dev_pw',
+    #     'HOST': 'localhost',
+    #     'PORT': '',
+    #     'OPTIONS': {
+    #         'init_command': ('SET NAMES utf8; ' +
+    #                             'SET default_storage_engine=INNODB; ' +
+    #                             'SET foreign_key_checks=0')
+    #     }
+    # }    
 }
 
 
@@ -129,3 +145,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'trackapp.User'
 
 LOGIN_URL = "/login"
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+]

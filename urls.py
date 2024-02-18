@@ -13,8 +13,10 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+
 from . import views
 
 urlpatterns = [
@@ -27,7 +29,7 @@ urlpatterns = [
     path("user_list", views.user_list, name="user_list"), 
     path('profile/<int:user_id>', views.profile, name="profile"),
     path('meets', views.meets, name="meets"),
-    path('meet/<int:meet_id>', views.meet, name="meet"),
+    path('meet/<int:meet_id>/<slug:name>/', views.meet, name="meet"),
     path('events', views.events, name="events"),
     path('event/<int:event_id>', views.event, name="event"),
     path('merge_event/<int:event_id>', views.merge_event, name="merge_event"),
@@ -64,3 +66,8 @@ urlpatterns = [
         views.load_qualifying_levels,
         name="load_qualifying_levels"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += [
+        path('__debug__/', include('debug_toolbar.urls')),
+    ]

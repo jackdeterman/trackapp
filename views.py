@@ -9,23 +9,38 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import decorators
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Q, Count, Min
+from django.db.models.query import prefetch_related_objects
 from django.http import JsonResponse
 from django.shortcuts import (
     HttpResponse, HttpResponseRedirect, render, redirect, get_object_or_404)
 from django.urls import reverse
+from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_exempt
 from openpyxl import load_workbook
 
 from .models import *
+from .importers import import_performances, import_qualifying
 from .forms import *
 from .event_dict import EVENT_DICT
 
 
-@login_required
-def index(request):
 
-    return render(request, "index.html")
+def index(request):
+    meets = Meet.objects.all().order_by("-date")[:10]
+
+    latest_prs = Result.objects.filter(
+        personal_rank=1,
+    ).order_by(
+        '-meet__date'
+    )[:20]
+
+
+    return render(request, "index.html", {
+        "meets": meets,
+        "latest_prs": latest_prs,
+    })
+
 
 @login_required
 def load_spreadsheet(request):
@@ -35,154 +50,12 @@ def load_spreadsheet(request):
         if not upload_form.is_valid():
             raise Exception("Error")
 
-        team = upload_form.cleaned_data['team']
-
-        season_name  = upload_form.cleaned_data['season']
-        try:
-            season = Season.objects.get(name=season_name)
-        except Season.DoesNotExist:
-            print(f"Creating season {season_name}")
-            season = Season(
-                name=season_name,
-            )
-            season.save()
-
-
-        wb = load_workbook(upload_form.cleaned_data['file'])
-        sheet = wb.active
-
-        with transaction.atomic():
-            headers = []
-            for header in sheet[1]:
-                headers.append(header.value.lower())
-
-            total = 0
-            users = set()
-            for row in sheet.iter_rows(min_row=2, values_only=True):
-                row = dict(zip(headers, row))
-
-                first_name = row['first name'].strip()
-                last_name = row['last name'].strip()
-                username = f"{first_name.lower()}.{last_name.lower()}"
-
-                try:
-                    user = User.objects.get(username=username)
-                except User.DoesNotExist:
-                    print(f"Creating {username}")
-                    user = User(
-                        username=username,
-                        first_name=first_name,
-                        last_name=last_name
-                    )
-                    user.save()
-                users.add(user)
-
-                event_name = row['event'].strip()
-                if event_name in EVENT_DICT:
-                    if EVENT_DICT[event_name] != '':
-                        event_name = EVENT_DICT[event_name]
-
-                unit = 'inches'
-                if 'meter' in event_name.lower():
-                    unit = 'seconds'
-                elif 'smr' in event_name.lower():
-                    unit = 'seconds'
-                elif 'hurdle' in event_name.lower():
-                    unit = 'seconds'
-                elif 'hurdle' in event_name.lower():
-                    unit = 'seconds'
-                elif 'yard' in event_name.lower():
-                    unit = 'seconds'
-                elif 'mile' in event_name.lower():
-                    unit = 'seconds'
-                elif 'medley' in event_name.lower():
-                    unit = 'seconds'
-
-                try:
-                    event = Event.objects.get(name=event_name)
-                except Event.DoesNotExist:
-                    print(f"Creating {event_name}")
-                    event = Event(
-                        name=event_name,
-                        unit=unit
-                    )
-                    event.save()
-
-                if 'meet' in row:
-                    meet_name = row['meet']
-                    meet_date = row['date']
-                elif 'opponent' in row:
-                    meet_name = row['opponent']
-                    meet_date = row['date']
-                else:
-                    meet_name = row['date']
-                    date_str = meet_name.split(' ')[0]
-                    date_str += '/2019'
-                    meet_date = datetime.strptime(date_str, "%m/%d/%Y").date()
-
-                try:
-                    meet = Meet.objects.get(description=meet_name, date=meet_date)
-                except Meet.DoesNotExist:
-                    print(f"Creating {meet_name}")
-                    meet = Meet(
-                        description=meet_name,
-                        date=meet_date,
-                        team=team,
-                        season=season
-                    )
-                    meet.save()
-
-                performance = row['performance']
-                if isinstance(performance, str):
-                    if "-" in performance:
-                        feet, inches = performance.split("-")
-                        feet = float(feet)
-                        inches = float(inches)
-                        performance = (12.0 * feet) + inches
-                    elif ':' in performance:
-                        try:
-                            pt = datetime.strptime(performance,'%M:%S.%f')
-                        except:
-                            print(f"Skipping {performance}")
-                            continue
-                        performance = pt.second + pt.minute*60.0 + pt.hour*3600.0 + (pt.microsecond/1000000.0)
-
-                try:
-                    performance = float(performance)
-                except:
-                    print(f"Skipping {performance}")
-                    continue
-
-                try:
-                    result = Result.objects.get(
-                        meet=meet,
-                        event=event,
-                        athlete=user,
-                        result=performance
-                    )
-                except Result.DoesNotExist:
-                    if 'fat/ht/na' in row:
-                        method = row['fat/ht/na']
-                    else:
-                        method = row['fat / hand']
-                    result = Result(
-                        meet=meet,
-                        event=event,
-                        athlete=user,
-                        result=performance,
-                        method=method
-                    )
-                    result.save()
-                    total += 1
-
-            # Recalc
-            for user in users:
-                calculate_result_stats(user)
-
-            #raise Exception("Data Test.")
-
-
-        print(f"{total} rows processed") 
+        import_performances(
+            upload_form.cleaned_data['file'], 
+            team=upload_form.cleaned_data['team'],
+            season=upload_form.cleaned_data['season'],
+            gender=upload_form.cleaned_data['gender']
+        )
         return redirect('load_spreadsheet')       
     else:
         upload_form = UploadForm()
@@ -243,7 +116,6 @@ def register(request):
     else:
         return render(request, "register.html")
 
-@login_required
 def user_list(request):
 
     users = User.objects.all().order_by("last_name")
@@ -261,11 +133,19 @@ def user_list(request):
 
     return render(request, "user_list.html", {"users":users})
 
-@login_required
 def profile(request, user_id):
 
     user = User.objects.get(id=user_id)
-    results = Result.objects.filter(athlete=user).order_by('meet__date')
+    results = Result.objects.filter(
+        athlete=user
+    ).order_by(
+        'meet__date'
+    ).prefetch_related(
+        'event',
+        'meet',
+        'meet__season',
+        'qualifications'
+    )
     goals = user.goals.all()
 
     results_by_event = {}
@@ -275,6 +155,8 @@ def profile(request, user_id):
         else:
             results_by_event[result.event] = [result]
 
+    results_by_event = sorted(results_by_event.items(), key=lambda e: e[0].name)
+
     return render(request, "profile.html", {
         'user': user,
         'results':results,
@@ -282,36 +164,43 @@ def profile(request, user_id):
         'goals': goals,
         })
 
-@login_required
 def meets(request):
-    meets = Meet.objects.all().order_by("date")
+    meets = Meet.objects.all().prefetch_related('team', 'season')
 
     return render(request, "meets.html", {"meets":meets})
 
-@login_required
-def meet(request, meet_id):
+def meet(request, meet_id, name):
 
     
     meet = get_object_or_404(Meet, id=meet_id)
-    results = Result.objects.filter(meet=meet).order_by('result')
+    results = Result.objects.filter(
+        meet=meet
+    ).order_by(
+        'result'
+    ).prefetch_related(
+        'event',
+        'athlete',
+        'qualifications'
+    )
+
+    new_prs = results.filter(personal_rank=1).count()
+    qualifications = Result.qualifications.through.objects.filter(result__in=results).count()
 
     results_by_event = {}
     athletes = set()
     for result in results:
         athletes.add(result.athlete)
-        if result.event in results_by_event:
-            results_by_event[result.event].append(result)
-        else:
-            results_by_event[result.event] = [result]
+        results_by_event.setdefault(result.event, []).append(result)
     
     return render(request, "meet.html", {
         'meet': meet,
-        'results':results,
         'athletes': athletes,
-        'results_by_event': results_by_event
+        'results': results,
+        'results_by_event': results_by_event,
+        'new_prs': new_prs,
+        'qualifications': qualifications,
         })
 
-@login_required
 def events(request):
     events = Event.objects.all().order_by("name")
 
@@ -324,11 +213,23 @@ def events(request):
 
     return render(request, "events.html", {"events":events})
 
-@login_required
 def event(request, event_id):
 
     event = Event.objects.get(id=event_id)
-    results = Result.objects.filter(event=event).order_by("result")
+    results_qs = Result.objects.filter(
+        event=event
+    ).order_by(
+        'result'
+    ).prefetch_related(
+        'athlete'
+    )
+
+    found = set()
+    results = []
+    for r in results_qs:
+        if not r.athlete in found:
+            found.add(r.athlete)
+            results.append(r)
 
     return render(request, "event.html", {
         'event':event,
@@ -394,7 +295,7 @@ def edit_result(request, result_id):
         if form.is_valid():
             form.save()
             calculate_result_stats(user)
-            messages.success(request, 'Result successfully updated.')            
+            messages.success(request, 'Result successfully updated.') 
             return redirect("profile", user.id)
     else:
         form = ResultForm(instance=result)
@@ -457,9 +358,12 @@ def merge_athlete(request, user_id):
         form = MergeAthleteForm(request.POST)
         if form.is_valid():
             survivor = form.cleaned_data['user']
+            survivor.gender = user.gender
+            survivor.save()
             user.results.all().update(athlete=survivor)
             user.delete()
             print(f"Merging {user.id} into {survivor.id}")
+            survivor.calculate_result_stats()
             return redirect('profile', survivor.id)
     else:
         form = MergeAthleteForm()
@@ -516,26 +420,26 @@ def merge_meet(request, meet_id):
     meet = Meet.objects.get(id=meet_id)
 
     if request.method=="POST":
-        form = MergeMeetForm(request.POST)
+        form = MergeMeetForm(request.POST, meet=meet)
         if form.is_valid():
             survivor = form.cleaned_data['meet']
             meet.results.all().update(meet=survivor)
             meet.delete()
             print(f"Merging {meet.description} into {survivor.description}")
-            return redirect('meet', survivor.id)
+            return redirect('meet', survivor.id, slugify(survivor.description))
     else:
-        form = MergeMeetForm()
+        form = MergeMeetForm(meet=meet)
 
     return render(request, "merge_meet.html", {
         "form": form,
         "meet":meet,
     })
+
 def teams(request):
     teams = Team.objects.all().order_by("name")
 
     return render(request, "teams.html", {"teams":teams})
 
-@login_required
 def team(request, team_id):
     team = get_object_or_404(Team, id=team_id)
 
@@ -635,7 +539,11 @@ def debug_page(request):
 
 
 def qualifying_levels(request):
-    qualifying_levels = QualifyingLevel.objects.all().order_by("description", "gender")
+    qualifying_levels = QualifyingLevel.objects.all().prefetch_related(
+        'event', 'season'
+    ).order_by(
+        "description", "gender"
+    )
 
     form = QualifyingFilterForm(request.GET)
     form.is_valid()
@@ -688,68 +596,10 @@ def load_qualifying_levels(request):
 
         season  = upload_form.cleaned_data['season']
 
-        wb = load_workbook(upload_form.cleaned_data['file'])
-        sheet = wb.active
-        with transaction.atomic():
-            headers = []
-            for header in sheet[1]:
-                headers.append(header.value.lower())
-
-            total = 0
-            users = set()
-            for row in sheet.iter_rows(min_row=2, values_only=True):
-                row = dict(zip(headers, row))
-
-                description = row['description'].strip()
-                gender = row['gender'].strip()
-
-                event_name = row['event'].strip()
-                if event_name in EVENT_DICT:
-                    if EVENT_DICT[event_name] != '':
-                        event_name = EVENT_DICT[event_name]
-                event = Event.objects.get(name=event_name)
-
-                performance = row['performance']
-                if isinstance(performance, str):
-                    if "-" in performance:
-                        feet, inches = performance.split("-")
-                        feet = float(feet)
-                        inches = float(inches)
-                        performance = (12.0 * feet) + inches
-                    elif ':' in performance:
-                        try:
-                            pt = datetime.strptime(performance,'%M:%S.%f')
-                        except:
-                            print(f"Skipping {performance}")
-                            continue
-                        performance = pt.second + pt.minute*60.0 + pt.hour*3600.0 + (pt.microsecond/1000000.0)
-
-                try:
-                    performance = float(performance)
-                except:
-                    print(f"Skipping {performance}")
-                    continue
-
-                try:
-                    qt = QualifyingLevel.objects.get(
-                        description=description,
-                        event=event,
-                        season=season,
-                        gender=gender
-                    )
-                except QualifyingLevel.DoesNotExist:
-                    print(f"Creating {event.name} for {description}")
-                    qt = QualifyingLevel(
-                        description=description,
-                        event=event,
-                        season=season,
-                        gender=gender
-                    )
-                qt.value = performance
-                qt.save()
-                
-            #raise Exception("Data Test.")
-
+        import_qualifying(
+            upload_form.cleaned_data['file'], 
+            season
+        )
 
         return redirect('load_qualifying_levels')       
     else:
